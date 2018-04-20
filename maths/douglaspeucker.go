@@ -30,8 +30,8 @@ func DouglasPeucker(points []Pt, tolerance float64, simplify bool) []Pt {
 	}
 	//log.Printf("dmax(%v) > epsilon(%v)", dmax, epsilon)
 	if dmax > epsilon {
-		rec1 := DouglasPeucker(points[0:idx], epsilon, simplify)
-		rec2 := DouglasPeucker(points[idx:], epsilon, simplify)
+		rec1 := DouglasPeucker(points[0:idx], tolerance, simplify)
+		rec2 := DouglasPeucker(points[idx:], tolerance, simplify)
 		//rec1 = rec1[:len(rec1)-1]
 		newpts := append(rec1, rec2...)
 		//log.Printf("Dmax(%v) > epsilon(%v) returns len(pts):%v", dmax, epsilon, len(newpts))
