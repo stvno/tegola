@@ -3,9 +3,11 @@ package s3
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -35,7 +37,7 @@ const (
 	ConfigKeyAWSAccessKeyID = "aws_access_key_id"
 	ConfigKeyAWSSecretKey   = "aws_secret_access_key"
 	ConfigKeyACL            = "access_control_list" //	defaults to ""
-	ConfigKeyCacheControl   = "cache_control" //	defaults to ""
+	ConfigKeyCacheControl   = "cache_control"       //	defaults to ""
 )
 
 const (
@@ -233,6 +235,9 @@ type Cache struct {
 
 	// CacheControl is the http Cache Control header, if the not set it will use the default value for aws.
 	CacheControl string
+
+	// CacheControl is the http Cache Control header, if the not set it will use the default value for aws.
+	ContentType string
 }
 
 func (s3c *Cache) Set(key *cache.Key, val []byte) error {
@@ -247,9 +252,10 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	k := filepath.Join(s3c.Basepath, key.String())
 
 	input := s3.PutObjectInput{
-		Body:   aws.ReadSeekCloser(bytes.NewReader(val)),
-		Bucket: aws.String(s3c.Bucket),
-		Key:    aws.String(k),
+		Body:        aws.ReadSeekCloser(bytes.NewReader(val)),
+		Bucket:      aws.String(s3c.Bucket),
+		Key:         aws.String(k),
+		ContentType: aws.String("application/vnd.mapbox-vector-tile"),
 	}
 	if s3c.ACL != "" {
 		input.ACL = aws.String(s3c.ACL)
@@ -259,7 +265,18 @@ func (s3c *Cache) Set(key *cache.Key, val []byte) error {
 	}
 
 	_, err = s3c.Client.PutObject(&input)
+
 	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			fmt.Println(awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+			if reqErr, ok := err.(awserr.RequestFailure); ok {
+				if reqErr.StatusCode() == 503 {
+					time.Sleep(3 * time.Second)
+					fmt.Println("sleeping.....")
+					return nil
+				}
+			}
+		}
 		return err
 	}
 
