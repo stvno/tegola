@@ -277,7 +277,6 @@ func PurgeWorker(mt MapTile) error {
 
 func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 	defer close(c)
-
 	format, err := NewFormat(cacheFormat)
 	if err != nil {
 		return err
@@ -327,25 +326,6 @@ func sendTiles(zooms []uint, c chan *slippy.Tile) error {
 
 			c <- tile
 
-			// range
-			for _, zoom := range zooms {
-				err := tile.RangeFamilyAt(zoom, func(t *slippy.Tile) error {
-					if gdcmd.IsCancelled() {
-						return fmt.Errorf("cache manipulation interrupted")
-					}
-
-					if z1, x1, y1 := t.ZXY(); z != z1 || x != x1 || y != y1 {
-						c <- t
-					}
-
-					return nil
-				})
-
-				// graceful stop if cancelled
-				if err != nil {
-					return err
-				}
-			}
 		}
 
 		return nil
